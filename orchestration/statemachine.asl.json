@@ -1,0 +1,126 @@
+{
+  "Comment": "TheraScout pipeline. Each state below corresponds directly to a box in the agent pipeline diagram: Ingest -> Choice -> (Analyze in parallel | Enrich then Analyze) -> GapScore -> Report.",
+  "StartAt": "Agent_Ingest_CheckDataScope",
+  "States": {
+
+    "Agent_Ingest_CheckDataScope": {
+      "Type": "Task",
+      "Comment": "Diagram box: Agent: ingest — uses the check_data_scope tool",
+      "Resource": "${CheckDataScopeArn}",
+      "ResultPath": "$.scope_check",
+      "Next": "PublicDataSufficient"
+    },
+
+    "PublicDataSufficient": {
+      "Type": "Choice",
+      "Comment": "Diagram diamond: Public data sufficient?",
+      "Choices": [
+        {
+          "Variable": "$.scope_check.sufficient",
+          "BooleanEquals": true,
+          "Next": "Agent_Analyze_Parallel"
+        }
+      ],
+      "Default": "Agent_Enrich_EnterpriseData"
+    },
+
+    "Agent_Enrich_EnterpriseData": {
+      "Type": "Task",
+      "Comment": "Diagram box: Agent: enrich -> AgentCore Gateway -> Enterprise Data Store (MOCKED). Loops back into Analyze once enriched.",
+      "Resource": "${EnrichEnterpriseDataArn}",
+      "ResultPath": "$.enrichment",
+      "Next": "Agent_Analyze_Parallel"
+    },
+
+    "Agent_Analyze_Parallel": {
+      "Type": "Parallel",
+      "Comment": "Diagram box: Agent: analyze — the broadcast/gather fan-out to all 6 specialist agents, run in parallel. MVP NOTE: each branch below currently calls its data-fetch tool directly (Milestone 1-3 of the build order). Once a branch's real AgentCore agent is built, swap its Resource to the invoke_agentcore_agent Lambda (see Agent_GapAnalysisAndScoring below for that pattern) so the agent can reason over the fetched data rather than just returning it raw.",
+      "ResultPath": "$.agent_findings",
+      "Branches": [
+        {
+          "StartAt": "DiseaseAgent",
+          "States": {
+            "DiseaseAgent": {
+              "Type": "Task",
+              "Resource": "${QueryGlobocanDataArn}",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "TreatmentAgent",
+          "States": {
+            "TreatmentAgent": {
+              "Type": "Task",
+              "Resource": "${QueryOpenFdaArn}",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "ResearchAgent",
+          "States": {
+            "ResearchAgent": {
+              "Type": "Task",
+              "Resource": "${QueryPubmedArn}",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "ClinicalTrialAgent",
+          "States": {
+            "ClinicalTrialAgent": {
+              "Type": "Task",
+              "Resource": "${QueryClinicalTrialsArn}",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "CompetitionAgent",
+          "States": {
+            "CompetitionAgent": {
+              "Type": "Task",
+              "Comment": "MVP: derived from ClinicalTrials.gov sponsor field; a dedicated tool can be split out later",
+              "Resource": "${QueryClinicalTrialsArn}",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "TrendAgent",
+          "States": {
+            "TrendAgent": {
+              "Type": "Task",
+              "Comment": "MVP: derived from PubMed publication-date trends; a dedicated tool can be split out later",
+              "Resource": "${QueryPubmedArn}",
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "Agent_GapAnalysisAndScoring"
+    },
+
+    "Agent_GapAnalysisAndScoring": {
+      "Type": "Task",
+      "Comment": "Diagram box: Agent: gap_score — combines all 6 findings, applies data/scoring_weights.json, ranks Top 5-6. Calls the gap_scoring_agent via the generic AgentCore invoker Lambda.",
+      "Resource": "${InvokeAgentCoreAgentArn}",
+      "Parameters": {
+        "agent_runtime_id": "gap_scoring_agent",
+        "session_id.$": "$$.Execution.Name",
+        "payload.$": "$.agent_findings"
+      },
+      "ResultPath": "$.ranked_opportunities",
+      "Next": "Agent_Report_ComposePdf"
+    },
+
+    "Agent_Report_ComposePdf": {
+      "Type": "Task",
+      "Comment": "Diagram box: Agent: report — Report Composer (ReportLab)",
+      "Resource": "${ComposePdfReportArn}",
+      "End": true
+    }
+  }
+}

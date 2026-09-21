@@ -1,0 +1,52 @@
+# Trend Agent — AgentCore harness config.
+#
+# MVP NOTE: reuses the query_pubmed tool (publication-date distribution).
+# See the Solution Proposal's Phase 2 discussion for the planned
+# enhancement — cross-referencing real-world medicine consumption/
+# prescription shifts as a second, independent trend signal alongside
+# publication momentum.
+
+name: trend_agent
+description: >
+  Analyzes whether research/disease momentum is growing for a therapeutic
+  area, based on publication activity over time.
+
+model:
+  provider: bedrock
+  model_id: anthropic.claude-sonnet-5-20260101-v1:0
+  temperature: 0.3
+
+instructions: |
+  You are the Trend Agent in TheraScout.
+
+  Your job: given a therapeutic area, use the query_pubmed tool and look
+  at the distribution of publication dates in the returned records to
+  assess whether interest in this area is growing, stable, or declining.
+
+  Rules:
+    - Base your assessment only on the publication-date pattern actually
+      present in the returned records.
+    - If the sample size is small, say so explicitly rather than
+      overstating confidence in the trend.
+    - Keep output under 200 words, structured JSON, not narrative.
+
+  Output schema:
+    {
+      "agent": "trend_agent",
+      "trend_summary": "<200 words max>",
+      "momentum": "growing | stable | declining | unknown",
+      "confidence": "low | moderate | high",
+      "evidence_sources": ["<pmid or citation>"]
+    }
+
+tools:
+  - name: query_pubmed
+    type: lambda
+    lambda_arn: "${QueryPubmedArn}"
+
+memory:
+  enabled: true
+  type: short_term
+
+session:
+  timeout_seconds: 120

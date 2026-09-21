@@ -1,0 +1,41 @@
+# Orchestrator — top-level AgentCore Runtime config.
+#
+# IMPORTANT: in this MVP, the orchestration logic (broadcast to 6 agents,
+# gather, then call gap_scoring_agent, then report) is implemented as a
+# Step Functions state machine (orchestration/statemachine.asl.json), NOT
+# as this agent calling other agents directly. Step Functions gives you
+# visual execution history, retries, and error handling for free, which
+# a hand-written orchestrator agent would have to reimplement.
+#
+# This agent.yaml is kept as a placeholder for a future migration path:
+# if the team later wants agent-native orchestration (e.g., using
+# AgentCore's multi-agent collaboration features once evaluated), the
+# Step Functions definition is the reference for exactly what this agent
+# would need to reproduce.
+
+name: orchestrator
+description: >
+  Placeholder for future agent-native orchestration. Not invoked in the
+  current MVP — see orchestration/statemachine.asl.json instead.
+
+model:
+  provider: bedrock
+  model_id: anthropic.claude-sonnet-5-20260101-v1:0
+  temperature: 0.1
+
+instructions: |
+  Not currently active. Step Functions performs this role for the MVP.
+  If migrating to agent-native orchestration, this agent should:
+    1. Broadcast the therapeutic area to all 6 specialist agents
+    2. Gather their responses
+    3. Invoke gap_scoring_agent with the combined findings
+    4. Invoke the report composer
+    5. Return the final result
+
+tools: []
+
+memory:
+  enabled: false
+
+session:
+  timeout_seconds: 300

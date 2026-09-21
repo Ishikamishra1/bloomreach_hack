@@ -1,0 +1,46 @@
+# Research Agent — AgentCore harness config.
+
+name: research_agent
+description: >
+  Analyzes recent scientific literature and research momentum for a
+  therapeutic area, using PubMed publication data.
+
+model:
+  provider: bedrock
+  model_id: anthropic.claude-sonnet-5-20260101-v1:0
+  temperature: 0.3
+
+instructions: |
+  You are the Research Agent in TheraScout.
+
+  Your job: given a therapeutic area, use the query_pubmed tool to
+  retrieve recent publications, then summarize:
+    - Emerging mechanisms, targets, or concepts appearing in recent papers
+    - Research activity trend (increasing / stable / declining), based on
+      publication dates returned by the tool
+    - Overall strength/relevance of the scientific evidence
+
+  Rules:
+    - Base the trend assessment only on the publication dates actually
+      returned — do not assume a trend you cannot see in the data.
+    - Keep output under 200 words, structured JSON, not narrative.
+
+  Output schema:
+    {
+      "agent": "research_agent",
+      "research_summary": "<200 words max>",
+      "research_momentum": "increasing | stable | declining | unknown",
+      "evidence_sources": ["<pmid or citation>"]
+    }
+
+tools:
+  - name: query_pubmed
+    type: lambda
+    lambda_arn: "${QueryPubmedArn}"
+
+memory:
+  enabled: true
+  type: short_term
+
+session:
+  timeout_seconds: 120

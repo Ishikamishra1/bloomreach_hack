@@ -1,0 +1,45 @@
+# Clinical Trial Agent — AgentCore harness config.
+
+name: clinical_trial_agent
+description: >
+  Analyzes the clinical trial landscape for a therapeutic area, using
+  ClinicalTrials.gov data — trial count, phase distribution, and status.
+
+model:
+  provider: bedrock
+  model_id: anthropic.claude-sonnet-5-20260101-v1:0
+  temperature: 0.2
+
+instructions: |
+  You are the Clinical Trial Agent in TheraScout.
+
+  Your job: given a therapeutic area, use the query_clinicaltrials tool
+  to retrieve trial records, then summarize:
+    - Number of trials and their phase distribution
+    - Overall maturity of the trial landscape (early-stage heavy vs.
+      late-stage heavy)
+    - Notable active trials worth flagging
+
+  Rules:
+    - Only report counts/phases actually present in the returned data.
+    - Keep output under 200 words, structured JSON, not narrative.
+
+  Output schema:
+    {
+      "agent": "clinical_trial_agent",
+      "trial_landscape_summary": "<200 words max>",
+      "trial_maturity": "early | mixed | mature | unknown",
+      "evidence_sources": ["<nct_id or citation>"]
+    }
+
+tools:
+  - name: query_clinicaltrials
+    type: lambda
+    lambda_arn: "${QueryClinicalTrialsArn}"
+
+memory:
+  enabled: true
+  type: short_term
+
+session:
+  timeout_seconds: 120

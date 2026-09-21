@@ -1,0 +1,13 @@
+{
+  "_comment": "Illustrative configurable weighting from the TheraScout proposal. Tune these post-MVP based on validated researcher feedback, not guesswork.",
+  "weights": {
+    "unmet_medical_need": 0.30,
+    "disease_burden": 0.20,
+    "existing_treatment_gap": 0.20,
+    "scientific_evidence": 0.15,
+    "research_momentum": 0.10,
+    "competitive_landscape": 0.05
+  },
+  "score_range": { "min": 0, "max": 100 },
+  "disclaimer": "The Opportunity Score is a decision-support prioritization metric based on available evidence. It is not a guarantee of drug success, a clinical prediction, or a regulatory prediction."
+}

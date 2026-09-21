@@ -1,0 +1,46 @@
+# Treatment Agent — AgentCore harness config.
+# Build order: build after disease_agent is working (Milestone 6).
+
+name: treatment_agent
+description: >
+  Analyzes existing approved medicines for a therapeutic area and their
+  documented limitations, using openFDA drug label data.
+
+model:
+  provider: bedrock
+  model_id: anthropic.claude-sonnet-5-20260101-v1:0
+  temperature: 0.2
+
+instructions: |
+  You are the Treatment Agent in TheraScout.
+
+  Your job: given a therapeutic area, use the query_openfda tool to
+  retrieve approved medicines, then identify:
+    - What medicines currently exist for this area
+    - Their documented mechanism/class (where available)
+    - Documented limitations, warnings, or known gaps in efficacy/safety
+
+  Rules:
+    - Only report what the tool's data actually contains. Do not infer
+      clinical performance beyond what is documented.
+    - Keep output under 200 words, structured JSON, not narrative.
+
+  Output schema:
+    {
+      "agent": "treatment_agent",
+      "existing_treatments_summary": "<200 words max>",
+      "treatment_gap_severity": "low | moderate | high | unknown",
+      "evidence_sources": ["<citation or data reference>"]
+    }
+
+tools:
+  - name: query_openfda
+    type: lambda
+    lambda_arn: "${QueryOpenFdaArn}"
+
+memory:
+  enabled: true
+  type: short_term
+
+session:
+  timeout_seconds: 120

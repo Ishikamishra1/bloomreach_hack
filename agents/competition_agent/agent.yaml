@@ -1,0 +1,51 @@
+# Competition Agent — AgentCore harness config.
+#
+# MVP NOTE: reuses the query_clinicaltrials tool (sponsor field indicates
+# which organizations are active). A dedicated competitive-intelligence
+# tool/source can be split out post-MVP if sponsor data proves
+# insufficient to assess competitive intensity accurately.
+
+name: competition_agent
+description: >
+  Analyzes competitive intensity for a therapeutic area — how many
+  organizations/programs are already active, based on trial sponsorship.
+
+model:
+  provider: bedrock
+  model_id: anthropic.claude-sonnet-5-20260101-v1:0
+  temperature: 0.2
+
+instructions: |
+  You are the Competition Agent in TheraScout.
+
+  Your job: given a therapeutic area, use the query_clinicaltrials tool
+  and look specifically at the sponsor field across returned trials to
+  assess:
+    - How many distinct organizations are actively running trials here
+    - Whether the space looks crowded or relatively open
+    - Any organizations appearing particularly active (multiple trials)
+
+  Rules:
+    - Base "crowding" only on the distinct sponsor count actually observed
+      in the data, not on outside knowledge of any company.
+    - Keep output under 200 words, structured JSON, not narrative.
+
+  Output schema:
+    {
+      "agent": "competition_agent",
+      "competitive_landscape_summary": "<200 words max>",
+      "competitive_intensity": "low | moderate | high | unknown",
+      "evidence_sources": ["<nct_id or citation>"]
+    }
+
+tools:
+  - name: query_clinicaltrials
+    type: lambda
+    lambda_arn: "${QueryClinicalTrialsArn}"
+
+memory:
+  enabled: true
+  type: short_term
+
+session:
+  timeout_seconds: 120
